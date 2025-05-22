@@ -1,63 +1,90 @@
 #!/bin/bash
 
-# Title: Ubuntu Maintenance Script
+# Title: Ultimate Ubuntu Maintenance Script
 # Author: Tyler Hodges
-# Description: Updates, upgrades, cleans, and reports system health.
+# Purpose: Keep your server clean, secure, fast, and healthy.
 
-set -e
+set -euo pipefail
 
-echo "🧼 Starting maintenance at $(date)"
-echo "--------------------------------------------------"
+echo "🚀 Starting full maintenance run at $(date)"
+echo "=================================================="
 
-# 1. Update package lists
-echo "📦 Updating package list..."
-sudo apt update -y
+# 1. Package Management
+echo "📦 Updating and upgrading system packages..."
+sudo apt update -y && sudo apt full-upgrade -y
+echo "🧹 Removing unused packages and cleaning cache..."
+sudo apt autoremove -y && sudo apt autoclean -y && sudo apt clean -y
 
-# 2. Upgrade all packages
-echo "⬆️  Upgrading packages..."
-sudo apt upgrade -y
-
-# 3. Full upgrade
-echo "📦 Performing full upgrade (includes kernel, etc.)..."
-sudo apt full-upgrade -y
-
-# 4. Remove unnecessary packages
-echo "🧹 Autoremoving unused packages..."
-sudo apt autoremove -y
-
-# 5. Clean apt cache
-echo "🧽 Cleaning up package cache..."
-sudo apt autoclean -y
-sudo apt clean
-
-# 6. Snap package cleanup
+# 2. Snap & Flatpak Cleanup
 if command -v snap >/dev/null 2>&1; then
-  echo "📦 Cleaning up old Snap revisions..."
+  echo "📦 Removing old Snap versions..."
   snap list --all | awk '/disabled/{print $1, $3}' | while read snapname revision; do
     sudo snap remove "$snapname" --revision="$revision"
   done
 fi
-
-# 7. Flatpak cleanup
 if command -v flatpak >/dev/null 2>&1; then
-  echo "📦 Cleaning up old Flatpak versions..."
+  echo "📦 Removing unused Flatpak packages..."
   flatpak uninstall --unused -y
 fi
 
-# 8. Check for failed services
-echo "🔍 Checking for failed services..."
-FAILED_SERVICES=$(systemctl --failed --no-legend)
-if [ -n "$FAILED_SERVICES" ]; then
-  echo "⚠️  Failed services detected:"
-  echo "$FAILED_SERVICES"
+# 3. Security Updates
+echo "🛡️  Checking for security updates..."
+sudo unattended-upgrade --dry-run -d | grep -i "install"
+
+# 4. Rootkit Detection
+echo "🔍 Running rootkit check (rkhunter)..."
+if ! command -v rkhunter >/dev/null 2>&1; then
+  echo "Installing rkhunter..."
+  sudo apt install rkhunter -y
+fi
+sudo rkhunter --update
+sudo rkhunter --check --sk
+
+# 5. SUID/SGID Check
+echo "🔎 Searching for SUID/SGID files..."
+find / -xdev \( -perm -4000 -o -perm -2000 \) -type f 2>/dev/null | tee /tmp/suid_sgid_files.txt
+
+# 6. Disk Health
+echo "💽 Checking disk health (SMART)..."
+if command -v smartctl >/dev/null 2>&1; then
+  sudo smartctl --scan | awk '{print $1}' | while read -r dev; do
+    echo "🔧 Device: $dev"
+    sudo smartctl -H "$dev"
+  done
 else
-  echo "✅ No failed services."
+  echo "Installing smartmontools..."
+  sudo apt install smartmontools -y
 fi
 
-# 9. Disk usage summary
-echo "💽 Disk usage:"
+# 7. Zombie Processes
+echo "🧟 Looking for zombie processes..."
+ZOMBIES=$(ps aux | awk '{ if ($8=="Z") print $0 }')
+if [ -n "$ZOMBIES" ]; then
+  echo "⚠️  Zombie processes found:"
+  echo "$ZOMBIES"
+else
+  echo "✅ No zombie processes detected."
+fi
+
+# 8. Top resource hogs
+echo "🔥 Top 5 CPU-consuming processes:"
+ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head -n 6
+
+echo "🔥 Top 5 memory-consuming processes:"
+ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head -n 6
+
+# 9. Disk Usage Summary
+echo "📊 Disk usage:"
 df -h /
 
-# 10. Done
-echo "✅ Maintenance complete at $(date)"
-echo "--------------------------------------------------"
+# 10. Journal Space Check
+echo "🧾 Checking journal space usage..."
+journalctl --disk-usage
+
+# 11. Uptime & Load
+echo "📈 Uptime and load average:"
+uptime
+
+# Done
+echo "✅ All tasks complete at $(date)"
+echo "=================================================="
