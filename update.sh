@@ -8,14 +8,21 @@ set -euo pipefail
 
 LOG_FILE="$(dirname "$0")/maintenance.log"
 
-# Show initial message to stdout before redirecting
-echo "Update script ran successfully."
+# Function to handle errors and print failure to stdout
+on_failure() {
+  echo "❌ Maintenance failed." >&2
+  echo "failure"
+  exit 1
+}
 
-# Redirect all output to log file
-exec > "$LOG_FILE" 2>&1
+# Trap errors
+trap 'on_failure' ERR
+
+# Start logging
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "🚀 Starting full maintenance run at $(date)"
-echo "================================================="=
+echo "=================================================="
 
 # 1. Package Management
 echo "📦 Updating and upgrading system packages..."
@@ -26,7 +33,7 @@ sudo -n apt autoremove -y && sudo -n apt autoclean -y && sudo -n apt clean -y
 # 2. Snap & Flatpak Cleanup
 if command -v snap >/dev/null 2>&1; then
   echo "📦 Removing old Snap versions..."
-  snap list --all | awk '/disabled/{print $1, $3}' | while read snapname revision; do
+  snap list --all | awk '/disabled/{print $1, $3}' | while read -r snapname revision; do
     sudo -n snap remove "$snapname" --revision="$revision"
   done
 fi
@@ -97,4 +104,6 @@ uptime
 echo "✅ All tasks complete at $(date)"
 echo "=================================================="
 
-
+# Final success message for n8n to parse
+echo "success"
+exit 0
