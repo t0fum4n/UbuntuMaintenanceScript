@@ -8,13 +8,8 @@ set -euo pipefail
 
 LOG_FILE="$(dirname "$0")/maintenance.log"
 
-# Function to show completion message
-show_completion() {
-    echo "Update script ran successfully." > /dev/tty
-}
-
-# Set trap to always show completion message
-trap show_completion EXIT
+# Show initial message to stdout before redirecting
+echo "Update script ran successfully."
 
 # Redirect all output to log file
 exec > "$LOG_FILE" 2>&1
