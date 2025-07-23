@@ -8,7 +8,8 @@ set -euo pipefail
 
 LOG_FILE="$(dirname "$0")/maintenance.log"
 
-# Redirect all output to log file
+# Save original stdout and redirect all output to log file
+exec 3>&1
 exec > "$LOG_FILE" 2>&1
 
 echo "🚀 Starting full maintenance run at $(date)"
@@ -95,4 +96,4 @@ echo "✅ All tasks complete at $(date)"
 echo "=================================================="
 
 # Show success message on stdout
-echo "Update script ran successfully." > /dev/tty
+echo "Update script ran successfully." >&3
