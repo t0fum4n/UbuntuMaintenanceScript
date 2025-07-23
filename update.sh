@@ -6,20 +6,25 @@
 
 set -euo pipefail
 
+LOG_FILE="/var/log/maintenance-$(date +%Y%m%d-%H%M%S).log"
+
+# Redirect all output to log file
+exec > "$LOG_FILE" 2>&1
+
 echo "🚀 Starting full maintenance run at $(date)"
-echo "=================================================="
+echo "================================================="=
 
 # 1. Package Management
 echo "📦 Updating and upgrading system packages..."
-sudo apt update -y && sudo apt full-upgrade -y
+sudo -n apt update -y && sudo -n apt full-upgrade -y
 echo "🧹 Removing unused packages and cleaning cache..."
-sudo apt autoremove -y && sudo apt autoclean -y && sudo apt clean -y
+sudo -n apt autoremove -y && sudo -n apt autoclean -y && sudo -n apt clean -y
 
 # 2. Snap & Flatpak Cleanup
 if command -v snap >/dev/null 2>&1; then
   echo "📦 Removing old Snap versions..."
   snap list --all | awk '/disabled/{print $1, $3}' | while read snapname revision; do
-    sudo snap remove "$snapname" --revision="$revision"
+    sudo -n snap remove "$snapname" --revision="$revision"
   done
 fi
 if command -v flatpak >/dev/null 2>&1; then
@@ -29,16 +34,16 @@ fi
 
 # 3. Security Updates
 echo "🛡️  Checking for security updates..."
-sudo unattended-upgrade --dry-run -d | grep -i "install"
+sudo -n unattended-upgrade --dry-run -d | grep -i "install"
 
 # 4. Rootkit Detection
 echo "🔍 Running rootkit check (rkhunter)..."
 if ! command -v rkhunter >/dev/null 2>&1; then
   echo "Installing rkhunter..."
-  sudo apt install rkhunter -y
+  sudo -n apt install rkhunter -y
 fi
-sudo rkhunter --update
-sudo rkhunter --check --sk
+sudo -n rkhunter --update
+sudo -n rkhunter --check --sk
 
 # 5. SUID/SGID Check
 echo "🔎 Searching for SUID/SGID files..."
@@ -47,13 +52,13 @@ find / -xdev \( -perm -4000 -o -perm -2000 \) -type f 2>/dev/null | tee /tmp/sui
 # 6. Disk Health
 echo "💽 Checking disk health (SMART)..."
 if command -v smartctl >/dev/null 2>&1; then
-  sudo smartctl --scan | awk '{print $1}' | while read -r dev; do
+  sudo -n smartctl --scan | awk '{print $1}' | while read -r dev; do
     echo "🔧 Device: $dev"
-    sudo smartctl -H "$dev"
+    sudo -n smartctl -H "$dev"
   done
 else
   echo "Installing smartmontools..."
-  sudo apt install smartmontools -y
+  sudo -n apt install smartmontools -y
 fi
 
 # 7. Zombie Processes
@@ -88,3 +93,6 @@ uptime
 # Done
 echo "✅ All tasks complete at $(date)"
 echo "=================================================="
+
+# Show success message on stdout
+echo "Update script ran successfully." > /dev/tty
