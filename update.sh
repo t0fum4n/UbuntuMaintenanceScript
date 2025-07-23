@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-LOG_FILE="/var/log/maintenance-$(date +%Y%m%d-%H%M%S).log"
+LOG_FILE="$(dirname "$0")/maintenance-$(date +%Y%m%d-%H%M%S).log"
 
 # Redirect all output to log file
 exec > "$LOG_FILE" 2>&1
