@@ -14,10 +14,10 @@ on_failure() {
   exit 1
 }
 
-# Trap errors and call on_failure
+# Trap any command failure
 trap 'on_failure' ERR
 
-# Run all commands in a subshell and write all output to the log file (overwrite each run)
+# Run everything inside a subshell, logging to file only (overwrite each time)
 (
   echo "🚀 Starting full maintenance run at $(date)"
   echo "=================================================="
@@ -42,7 +42,7 @@ trap 'on_failure' ERR
 
   # 3. Security Updates
   echo "🛡️  Checking for security updates..."
-  sudo -n unattended-upgrade --dry-run -d | grep -i "install"
+  sudo -n unattended-upgrade --dry-run -d | grep -i "install" || echo "No security updates found."
 
   # 4. Rootkit Detection
   echo "🔍 Running rootkit check (rkhunter)..."
@@ -101,8 +101,8 @@ trap 'on_failure' ERR
   echo "✅ All tasks complete at $(date)"
   echo "=================================================="
 
-) > "$LOG_FILE" 2>&1  # This line overwrites the log file each time
+) > "$LOG_FILE" 2>&1  # Overwrites log each run
 
-# If we made it here, everything succeeded
+# Success message for n8n
 echo "success"
 exit 0
