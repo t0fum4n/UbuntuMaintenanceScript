@@ -6,18 +6,18 @@
 
 set -euo pipefail
 
-LOG_FILE="$(dirname "$0")/maintenance-$(date '+%Y%m%d-%H%M%S').log"
+LOG_FILE="$(dirname "$0")/maintenance.log"
 
-# Function to handle errors
+# Function to handle any failure
 on_failure() {
   echo "failure"
   exit 1
 }
 
-# Trap any error and run on_failure
+# Trap errors and call on_failure
 trap 'on_failure' ERR
 
-# Run all logic in a subshell and redirect its output
+# Run all commands in a subshell and write all output to the log file (overwrite each run)
 (
   echo "🚀 Starting full maintenance run at $(date)"
   echo "=================================================="
@@ -100,8 +100,9 @@ trap 'on_failure' ERR
 
   echo "✅ All tasks complete at $(date)"
   echo "=================================================="
-) >> "$LOG_FILE" 2>&1
 
-# If we got here, everything succeeded
+) > "$LOG_FILE" 2>&1  # This line overwrites the log file each time
+
+# If we made it here, everything succeeded
 echo "success"
 exit 0
