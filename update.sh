@@ -8,8 +8,15 @@ set -euo pipefail
 
 LOG_FILE="$(dirname "$0")/maintenance.log"
 
-# Save original stdout and redirect all output to log file
-exec 3>&1
+# Function to show completion message
+show_completion() {
+    echo "Update script ran successfully." > /dev/tty
+}
+
+# Set trap to always show completion message
+trap show_completion EXIT
+
+# Redirect all output to log file
 exec > "$LOG_FILE" 2>&1
 
 echo "🚀 Starting full maintenance run at $(date)"
@@ -95,5 +102,4 @@ uptime
 echo "✅ All tasks complete at $(date)"
 echo "=================================================="
 
-# Show success message on stdout
-echo "Update script ran successfully." >&3
+
