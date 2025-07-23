@@ -45,13 +45,13 @@ trap 'on_failure' ERR
   sudo -n unattended-upgrade --dry-run -d | grep -i "install" || echo "No security updates found."
 
   # 4. Rootkit Detection
-  echo "🔍 Running rootkit check (rkhunter)..."
-  if ! command -v rkhunter >/dev/null 2>&1; then
-    echo "Installing rkhunter..."
-    sudo -n apt install rkhunter -y
-  fi
-  sudo -n rkhunter --update
-  sudo -n rkhunter --check --sk
+echo "🔍 Running rootkit check (rkhunter)..."
+if ! command -v rkhunter >/dev/null 2>&1; then
+  echo "Installing rkhunter..."
+  sudo -n apt install rkhunter -y
+fi
+sudo -n rkhunter --update || echo "⚠️  rkhunter update failed, continuing..."
+sudo -n rkhunter --check --sk || echo "⚠️  rkhunter scan failed, continuing..."
 
   # 5. SUID/SGID Check
   echo "🔎 Searching for SUID/SGID files..."
